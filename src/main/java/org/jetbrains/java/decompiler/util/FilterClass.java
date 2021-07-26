@@ -12,9 +12,7 @@ import java.util.List;
 public class FilterClass {
 
   public static boolean FILTER_FLAG = true;
-
   private static boolean USE_WHITE = false;
-
   private static List<String> whiteList;
   private static List<String> blackList;
 
@@ -28,7 +26,10 @@ public class FilterClass {
       if (blackList == null||blackList.size()<1) {
         FILTER_FLAG = false;
       }
+      System.out.println(FILTER_FLAG);
+      System.out.println(USE_WHITE);
     } catch (Exception e) {
+      e.printStackTrace();
       FILTER_FLAG = false;
     }
   }
@@ -42,20 +43,20 @@ public class FilterClass {
   }
 
   public static boolean judge(String className) {
+    //System.out.println(className);
     if (FILTER_FLAG) {
-
       //判断是否使用白名单，白名单启用的话，黑名单失效
       if (USE_WHITE) {
         return findArray(className, whiteList);
       } else {
         return !findArray(className, blackList);
       }
-
     }
-    return true;
+    return false;
   }
 
   private static boolean findArray(String str, List<String> list) {
+    //System.out.println("查找class："+str);
     for (String temp : list) {
       if (str.contains(temp)) {
         return true;

@@ -208,7 +208,7 @@ public class ConstantPool implements NewClassNameBuilder {
   }
 
 
-  //jdk11中String.java定义了repeat方法，代码从jdk源码中扣过来，硬编码了字符串编码为UTF-8
+  //modify jdk11中String.java定义了repeat方法，代码从jdk源码中扣过来，硬编码了字符串编码为UTF-8
   private static String repeat(String str, int count) {
     byte[] value = str.getBytes(StandardCharsets.UTF_8);
     if (count < 0) {

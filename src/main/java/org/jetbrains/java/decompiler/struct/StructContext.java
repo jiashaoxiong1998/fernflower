@@ -131,7 +131,7 @@ public class StructContext {
         //modify创建源码文件
         if(FilterClass.FILTER_FLAG){
           if(!FilterClass.judge(entry.getName())){
-            return;
+            continue;
           }
         }
 
