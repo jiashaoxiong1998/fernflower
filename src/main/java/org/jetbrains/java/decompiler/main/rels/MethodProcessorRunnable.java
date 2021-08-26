@@ -68,7 +68,6 @@ public class MethodProcessorRunnable implements Runnable {
 
   public static RootStatement codeToJava(StructClass cl, StructMethod mt, MethodDescriptor md, VarProcessor varProc) throws IOException {
     boolean isInitializer = CodeConstants.CLINIT_NAME.equals(mt.getName()); // for now static initializer only
-
     mt.expandData(cl);
     InstructionSequence seq = mt.getInstructionSequence();
     ControlFlowGraph graph = new ControlFlowGraph(seq);
@@ -85,6 +84,7 @@ public class MethodProcessorRunnable implements Runnable {
 
     ExceptionDeobfuscator.restorePopRanges(graph);
 
+
     if (DecompilerContext.getOption(IFernflowerPreferences.REMOVE_EMPTY_RANGES)) {
       ExceptionDeobfuscator.removeEmptyRanges(graph);
     }
@@ -99,13 +99,13 @@ public class MethodProcessorRunnable implements Runnable {
       DeadCodeHelper.incorporateValueReturns(graph);
     }
 
+
     //		ExceptionDeobfuscator.restorePopRanges(graph);
     ExceptionDeobfuscator.insertEmptyExceptionHandlerBlocks(graph);
 
     DeadCodeHelper.mergeBasicBlocks(graph);
 
     DecompilerContext.getCounterContainer().setCounter(CounterContainer.VAR_COUNTER, mt.getLocalVariables());
-
     if (ExceptionDeobfuscator.hasObfuscatedExceptions(graph)) {
       DecompilerContext.getLogger().writeMessage("Heavily obfuscated exception ranges found!", IFernflowerLogger.Severity.WARN);
       if (!ExceptionDeobfuscator.handleMultipleEntryExceptionRanges(graph)) {
@@ -114,12 +114,16 @@ public class MethodProcessorRunnable implements Runnable {
       ExceptionDeobfuscator.insertDummyExceptionHandlerBlocks(graph, mt.getBytecodeVersion());
     }
 
+
     RootStatement root = DomHelper.parseGraph(graph);
 
     FinallyProcessor fProc = new FinallyProcessor(md, varProc);
+
     while (fProc.iterateGraph(cl, mt, root, graph)) {
       root = DomHelper.parseGraph(graph);
     }
+
+
 
     // remove synchronized exception handler
     // not until now because of comparison between synchronized statements in the finally cycle
@@ -128,10 +132,10 @@ public class MethodProcessorRunnable implements Runnable {
     //		LabelHelper.lowContinueLabels(root, new HashSet<StatEdge>());
 
     SequenceHelper.condenseSequences(root);
-
     ClearStructHelper.clearStatements(root);
 
     ExprProcessor proc = new ExprProcessor(md, varProc);
+
     proc.processStatement(root, cl);
 
     SequenceHelper.condenseSequences(root);
@@ -139,18 +143,21 @@ public class MethodProcessorRunnable implements Runnable {
     StackVarsProcessor stackProc = new StackVarsProcessor();
 
     do {
+
       stackProc.simplifyStackVars(root, mt, cl);
       varProc.setVarVersions(root);
     }
     while (new PPandMMHelper().findPPandMM(root));
 
     while (true) {
+
       LabelHelper.cleanUpEdges(root);
 
       do {
         MergeHelper.enhanceLoops(root);
       }
       while (LoopExtractHelper.extractLoops(root) || IfHelper.mergeAllIfs(root));
+
 
       if (DecompilerContext.getOption(IFernflowerPreferences.IDEA_NOT_NULL_ANNOTATION)) {
         if (IdeaNotNullHelper.removeHardcodedChecks(root, mt)) {
@@ -160,11 +167,13 @@ public class MethodProcessorRunnable implements Runnable {
         }
       }
 
+
       LabelHelper.identifyLabels(root);
 
       if (InlineSingleBlockHelper.inlineSingleBlocks(root)) {
         continue;
       }
+
 
       // initializer may have at most one return point, so no transformation of method exits permitted
       if (isInitializer || !ExitHelper.condenseExits(root)) {
@@ -183,11 +192,13 @@ public class MethodProcessorRunnable implements Runnable {
 
     varProc.setVarDefinitions(root);
 
+
     // must be the last invocation, because it makes the statement structure inconsistent
     // FIXME: new edge type needed
     LabelHelper.replaceContinueWithBreak(root);
 
     mt.releaseResources();
+
 
     return root;
   }

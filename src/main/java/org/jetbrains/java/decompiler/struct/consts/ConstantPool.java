@@ -250,7 +250,7 @@ public class ConstantPool implements NewClassNameBuilder {
       StringBuilder buffer = new StringBuilder();
       if (vt.arrayDim > 0) {
 
-        //modify
+        //modify调用自定义的repeat方法
         //buffer.append("[".repeat(vt.arrayDim)).append('L').append(newName).append(';');
         buffer.append(repeat("[", vt.arrayDim)).append('L').append(newName).append(';');
       } else {

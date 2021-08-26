@@ -193,7 +193,8 @@ public final class DomHelper {
 
     RootStatement root = graphToStatement(graph);
 
-    if (!processStatement(root, new HashMap<>())) {
+    if (!processStatement(root, new HashMap<>(),1)) {
+
 
       //			try {
       //				DotExporter.toDotFile(root.getFirst().getStats().get(13), new File("c:\\Temp\\stat1.dot"));
@@ -202,6 +203,7 @@ public final class DomHelper {
       //			}
       throw new RuntimeException("parsing failure!");
     }
+
 
     LabelHelper.lowContinueLabels(root, new HashSet<>());
 
@@ -294,15 +296,19 @@ public final class DomHelper {
     }
   }
 
-  private static boolean processStatement(Statement general, HashMap<Integer, Set<Integer>> mapExtPost) {
+
+  private static boolean processStatement(Statement general, HashMap<Integer, Set<Integer>> mapExtPost, int count) {
+    //modify限制递归深度，超过30次就放弃
+    if (count++ == 30) {
+      return false;
+    }
 
     if (general.type == Statement.TYPE_ROOT) {
       Statement stat = general.getFirst();
       if (stat.type != Statement.TYPE_GENERAL) {
         return true;
-      }
-      else {
-        boolean complete = processStatement(stat, mapExtPost);
+      } else {
+        boolean complete = processStatement(stat, mapExtPost, count);
         if (complete) {
           // replace general purpose statement with simple one
           general.replaceStatement(stat, stat.getFirst());
@@ -331,8 +337,7 @@ public final class DomHelper {
               DecompilerContext.getLogger().writeMessage("Irreducible statement cannot be decomposed!", IFernflowerLogger.Severity.ERROR);
               break;
             }
-          }
-          else {
+          } else {
             if (mapstage == 2 || mapRefreshed) { // last chance lost
               DecompilerContext.getLogger().writeMessage("Statement cannot be decomposed although reducible!", IFernflowerLogger.Severity.ERROR);
             }
@@ -360,25 +365,22 @@ public final class DomHelper {
             if (general.type == Statement.TYPE_PLACEHOLDER) {
               return true;
             }
-
             Statement stat = findGeneralStatement(general, forceall, mapExtPost);
 
             if (stat != null) {
-              boolean complete = processStatement(stat, general.getFirst() == stat ? mapExtPost : new HashMap<>());
+              boolean complete = processStatement(stat, general.getFirst() == stat ? mapExtPost : new HashMap<>(), count);
 
               if (complete) {
                 // replace general purpose statement with simple one
                 general.replaceStatement(stat, stat.getFirst());
-              }
-              else {
+              } else {
                 return false;
               }
 
               mapExtPost = new HashMap<>();
               mapRefreshed = true;
               reducibility = 0;
-            }
-            else {
+            } else {
               break;
             }
           }
@@ -393,8 +395,7 @@ public final class DomHelper {
 
       if (mapRefreshed) {
         break;
-      }
-      else {
+      } else {
         mapExtPost = new HashMap<>();
       }
     }

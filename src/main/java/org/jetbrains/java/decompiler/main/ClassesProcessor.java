@@ -384,6 +384,7 @@ public class ClassesProcessor implements CodeConstants {
   }
 
   private static void initWrappers(ClassNode node) {
+
     if (node.type == ClassNode.CLASS_LAMBDA) {
       return;
     }

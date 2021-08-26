@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-//modify
+//modify新增的筛选功能，创建源码文件、写源码内容时调用
 public class FilterClass {
 
   public static boolean FILTER_FLAG = true;
