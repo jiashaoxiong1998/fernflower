@@ -108,7 +108,6 @@ public class Fernflower implements IDecompiledData {
 
   @Override
   public String getClassContent(StructClass cl) {
-
     try {
       TextBuffer buffer = new TextBuffer(ClassesProcessor.AVERAGE_CLASS_SIZE);
       buffer.append(DecompilerContext.getProperty(IFernflowerPreferences.BANNER).toString());

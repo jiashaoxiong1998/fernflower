@@ -20,9 +20,6 @@ import java.util.zip.ZipOutputStream;
 public class ConsoleDecompiler implements IBytecodeProvider, IResultSaver {
   @SuppressWarnings("UseOfSystemOutOrSystemErr")
   public static void main(String[] args) {
-
-//    args=new String[]{"/Volumes/shxjia/审计/op_manager/lib/webclient-ember.jar","/Volumes/shxjia/审计/op_manager/src/"};
-
     if (args.length < 2) {
       System.out.println(
         "Usage: java -jar fernflower.jar [-<option>=<value>]* [<source>]+ <destination>\n" +
@@ -105,7 +102,7 @@ public class ConsoleDecompiler implements IBytecodeProvider, IResultSaver {
   private final Map<String, ZipOutputStream> mapArchiveStreams = new HashMap<>();
   private final Map<String, Set<String>> mapArchiveEntries = new HashMap<>();
 
-  protected ConsoleDecompiler(File destination, Map<String, Object> options, IFernflowerLogger logger) {
+  public ConsoleDecompiler(File destination, Map<String, Object> options, IFernflowerLogger logger) {
     root = destination;
     engine = new Fernflower(this, this, options, logger);
   }

@@ -14,10 +14,10 @@ public class SwitchInstruction extends Instruction {
   public void initInstruction(InstructionSequence seq) {
     defaultDestination = seq.getPointerByRelOffset(operands[0]);
 
-    int prefix = opcode == opc_tableswitch ? 3 : 2;
+    int prefix = opcode == CodeConstants.opc_tableswitch ? 3 : 2;
     int len = operands.length - prefix;
     int low = 0;
-    if (opcode == opc_lookupswitch) {
+    if (opcode == CodeConstants.opc_lookupswitch) {
       len /= 2;
     }
     else {
@@ -27,7 +27,7 @@ public class SwitchInstruction extends Instruction {
     destinations = new int[len];
     values = new int[len];
     for (int i = 0, k = 0; i < len; i++, k++) {
-      if (opcode == opc_lookupswitch) {
+      if (opcode == CodeConstants.opc_lookupswitch) {
         values[i] = operands[prefix + k];
         k++;
       }

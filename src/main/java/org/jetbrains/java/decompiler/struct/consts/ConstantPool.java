@@ -1,8 +1,9 @@
-// Copyright 2000-2021 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2022 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.java.decompiler.struct.consts;
 
 import org.jetbrains.java.decompiler.code.CodeConstants;
 import org.jetbrains.java.decompiler.main.DecompilerContext;
+import org.jetbrains.java.decompiler.main.extern.ClassFormatException;
 import org.jetbrains.java.decompiler.modules.renamer.PoolInterceptor;
 import org.jetbrains.java.decompiler.struct.gen.FieldDescriptor;
 import org.jetbrains.java.decompiler.struct.gen.MethodDescriptor;
@@ -12,9 +13,7 @@ import org.jetbrains.java.decompiler.util.DataInputFullStream;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 
@@ -36,59 +35,46 @@ public class ConstantPool implements NewClassNameBuilder {
 
     // first pass: read the elements
     for (int i = 1; i < size; i++) {
-      byte tag = (byte) in.readUnsignedByte();
+      byte tag = (byte)in.readUnsignedByte();
 
       switch (tag) {
-        case CodeConstants.CONSTANT_Utf8:
+        case CodeConstants.CONSTANT_Utf8 ->
           pool.add(new PrimitiveConstant(CodeConstants.CONSTANT_Utf8, in.readUTF()));
-          break;
-
-        case CodeConstants.CONSTANT_Integer:
+        case CodeConstants.CONSTANT_Integer ->
           pool.add(new PrimitiveConstant(CodeConstants.CONSTANT_Integer, Integer.valueOf(in.readInt())));
-          break;
-
-        case CodeConstants.CONSTANT_Float:
+        case CodeConstants.CONSTANT_Float ->
           pool.add(new PrimitiveConstant(CodeConstants.CONSTANT_Float, in.readFloat()));
-          break;
-
-        case CodeConstants.CONSTANT_Long:
+        case CodeConstants.CONSTANT_Long -> {
           pool.add(new PrimitiveConstant(CodeConstants.CONSTANT_Long, in.readLong()));
           pool.add(null);
           i++;
-          break;
-
-        case CodeConstants.CONSTANT_Double:
+        }
+        case CodeConstants.CONSTANT_Double -> {
           pool.add(new PrimitiveConstant(CodeConstants.CONSTANT_Double, in.readDouble()));
           pool.add(null);
           i++;
-          break;
-
-        case CodeConstants.CONSTANT_Class:
-        case CodeConstants.CONSTANT_String:
-        case CodeConstants.CONSTANT_MethodType:
-        case CodeConstants.CONSTANT_Module:
-        case CodeConstants.CONSTANT_Package:
+        }
+        case CodeConstants.CONSTANT_Class, CodeConstants.CONSTANT_String, CodeConstants.CONSTANT_MethodType, CodeConstants.CONSTANT_Module, CodeConstants.CONSTANT_Package -> {
           pool.add(new PrimitiveConstant(tag, in.readUnsignedShort()));
           nextPass[0].set(i);
-          break;
-
-        case CodeConstants.CONSTANT_NameAndType:
+        }
+        case CodeConstants.CONSTANT_NameAndType -> {
           pool.add(new LinkConstant(tag, in.readUnsignedShort(), in.readUnsignedShort()));
           nextPass[0].set(i);
-          break;
-
-        case CodeConstants.CONSTANT_Fieldref:
-        case CodeConstants.CONSTANT_Methodref:
-        case CodeConstants.CONSTANT_InterfaceMethodref:
-        case CodeConstants.CONSTANT_InvokeDynamic:
+        }
+        case CodeConstants.CONSTANT_Fieldref, CodeConstants.CONSTANT_Methodref, CodeConstants.CONSTANT_InterfaceMethodref, CodeConstants.CONSTANT_Dynamic, CodeConstants.CONSTANT_InvokeDynamic -> {
           pool.add(new LinkConstant(tag, in.readUnsignedShort(), in.readUnsignedShort()));
           nextPass[1].set(i);
-          break;
-
-        case CodeConstants.CONSTANT_MethodHandle:
+        }
+        case CodeConstants.CONSTANT_MethodHandle -> {
           pool.add(new LinkConstant(tag, in.readUnsignedByte(), in.readUnsignedShort()));
           nextPass[2].set(i);
-          break;
+        }
+        default ->
+          // Fail-fast on unknown constant pool entry.
+          // We have no chance to process this class correctly.
+          throw new ClassFormatException(
+            String.format("Unsupported constant pool entry type %d at index #%d! ", Byte.toUnsignedInt(tag), i));
       }
     }
 
@@ -109,41 +95,22 @@ public class ConstantPool implements NewClassNameBuilder {
 
     for (int i = 1; i < size; i++) {
       switch (in.readUnsignedByte()) {
-        case CodeConstants.CONSTANT_Utf8:
-          in.readUTF();
-          break;
-
-        case CodeConstants.CONSTANT_Integer:
-        case CodeConstants.CONSTANT_Float:
-        case CodeConstants.CONSTANT_Fieldref:
-        case CodeConstants.CONSTANT_Methodref:
-        case CodeConstants.CONSTANT_InterfaceMethodref:
-        case CodeConstants.CONSTANT_NameAndType:
-        case CodeConstants.CONSTANT_InvokeDynamic:
+        case CodeConstants.CONSTANT_Utf8 -> in.readUTF();
+        case CodeConstants.CONSTANT_Integer, CodeConstants.CONSTANT_Float, CodeConstants.CONSTANT_Fieldref, CodeConstants.CONSTANT_Methodref, CodeConstants.CONSTANT_InterfaceMethodref, CodeConstants.CONSTANT_NameAndType, CodeConstants.CONSTANT_Dynamic, CodeConstants.CONSTANT_InvokeDynamic ->
           in.discard(4);
-          break;
-
-        case CodeConstants.CONSTANT_Long:
-        case CodeConstants.CONSTANT_Double:
+        case CodeConstants.CONSTANT_Long, CodeConstants.CONSTANT_Double -> {
           in.discard(8);
           i++;
-          break;
-
-        case CodeConstants.CONSTANT_Class:
-        case CodeConstants.CONSTANT_String:
-        case CodeConstants.CONSTANT_MethodType:
-          in.discard(2);
-          break;
-
-        case CodeConstants.CONSTANT_MethodHandle:
-          in.discard(3);
+        }
+        case CodeConstants.CONSTANT_Class, CodeConstants.CONSTANT_String, CodeConstants.CONSTANT_MethodType -> in.discard(2);
+        case CodeConstants.CONSTANT_MethodHandle -> in.discard(3);
       }
     }
   }
 
   public String[] getClassElement(int elementType, String className, int nameIndex, int descriptorIndex) {
-    String elementName = ((PrimitiveConstant) getConstant(nameIndex)).getString();
-    String descriptor = ((PrimitiveConstant) getConstant(descriptorIndex)).getString();
+    String elementName = ((PrimitiveConstant)getConstant(nameIndex)).getString();
+    String descriptor = ((PrimitiveConstant)getConstant(descriptorIndex)).getString();
 
     if (interceptor != null) {
       String oldClassName = interceptor.getOldName(className);
@@ -170,7 +137,7 @@ public class ConstantPool implements NewClassNameBuilder {
   }
 
   public PrimitiveConstant getPrimitiveConstant(int index) {
-    PrimitiveConstant cn = (PrimitiveConstant) getConstant(index);
+    PrimitiveConstant cn = (PrimitiveConstant)getConstant(index);
 
     if (cn != null && interceptor != null) {
       if (cn.type == CodeConstants.CONSTANT_Class) {
@@ -185,12 +152,12 @@ public class ConstantPool implements NewClassNameBuilder {
   }
 
   public LinkConstant getLinkConstant(int index) {
-    LinkConstant ln = (LinkConstant) getConstant(index);
+    LinkConstant ln = (LinkConstant)getConstant(index);
 
     if (ln != null && interceptor != null &&
-      (ln.type == CodeConstants.CONSTANT_Fieldref ||
-        ln.type == CodeConstants.CONSTANT_Methodref ||
-        ln.type == CodeConstants.CONSTANT_InterfaceMethodref)) {
+        (ln.type == CodeConstants.CONSTANT_Fieldref ||
+         ln.type == CodeConstants.CONSTANT_Methodref ||
+         ln.type == CodeConstants.CONSTANT_InterfaceMethodref)) {
       String newClassName = buildNewClassname(ln.classname);
       String newElement = interceptor.getName(ln.classname + ' ' + ln.elementname + ' ' + ln.descriptor);
       String newDescriptor = buildNewDescriptor(ln.type == CodeConstants.CONSTANT_Fieldref, ln.descriptor);
@@ -207,53 +174,17 @@ public class ConstantPool implements NewClassNameBuilder {
     return ln;
   }
 
-
-  //modify jdk11中String.java定义了repeat方法，代码从jdk源码中扣过来，硬编码了字符串编码为UTF-8
-  private static String repeat(String str, int count) {
-    byte[] value = str.getBytes(StandardCharsets.UTF_8);
-    if (count < 0) {
-      throw new IllegalArgumentException("count is negative: " + count);
-    }
-    if (count == 1) {
-      return str;
-    }
-    final int len = value.length;
-    if (len == 0 || count == 0) {
-      return "";
-    }
-    if (len == 1) {
-      final byte[] single = new byte[count];
-      Arrays.fill(single, value[0]);
-      return new String(single, StandardCharsets.UTF_8);
-    }
-    if (Integer.MAX_VALUE / count < len) {
-      throw new OutOfMemoryError("Repeating " + len + " bytes String " + count +
-        " times will produce a String exceeding maximum size.");
-    }
-    final int limit = len * count;
-    final byte[] multiple = new byte[limit];
-    System.arraycopy(value, 0, multiple, 0, len);
-    int copied = len;
-    for (; copied < limit - copied; copied <<= 1) {
-      System.arraycopy(multiple, 0, multiple, copied, copied);
-    }
-    System.arraycopy(multiple, 0, multiple, copied, limit - copied);
-    return new String(multiple, StandardCharsets.UTF_8);
-  }
-
   @Override
   public String buildNewClassname(String className) {
     VarType vt = new VarType(className, true);
 
-    String newName = interceptor.getName(vt.value);
+    String newName = interceptor.getName(vt.getValue());
     if (newName != null) {
       StringBuilder buffer = new StringBuilder();
-      if (vt.arrayDim > 0) {
-
-        //modify调用自定义的repeat方法
-        //buffer.append("[".repeat(vt.arrayDim)).append('L').append(newName).append(';');
-        buffer.append(repeat("[", vt.arrayDim)).append('L').append(newName).append(';');
-      } else {
+      if (vt.getArrayDim() > 0) {
+        buffer.append("[".repeat(vt.getArrayDim())).append('L').append(newName).append(';');
+      }
+      else {
         buffer.append(newName);
       }
       return buffer.toString();
@@ -265,7 +196,8 @@ public class ConstantPool implements NewClassNameBuilder {
   private String buildNewDescriptor(boolean isField, String descriptor) {
     if (isField) {
       return FieldDescriptor.parseDescriptor(descriptor).buildNewDescriptor(this);
-    } else {
+    }
+    else {
       return MethodDescriptor.parseDescriptor(descriptor).buildNewDescriptor(this);
     }
   }
